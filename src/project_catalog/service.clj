@@ -10,9 +10,32 @@
                               (clojure-version)
                               (route/url-for ::about-page))))
 
+(def mock-projedt-collection
+  {
+    :sleeping-cat
+    {
+      :name "Sleeping Cat Project"
+      :framework "Pedestal"
+      :language "Clojure"
+      :repo "https://gitlab.com/srehorn/sleepingcat"
+    }
+    :stinky-dog
+    {
+      :name "Stinky Dog Experiment"
+      :framework "Grails"
+      :language "Groovy"
+      :repo "https://gitlab.com/srehorn/stinkydog"
+    }
+  }
+)
+
 (defn home-page
   [request]
   (ring-resp/response "Hello World!"))
+  
+(defn get-projects
+  [request]
+  (http/json-response mock-projedt-collection))
 
 ;; Defines "/" and "/about" routes with their associated :get handlers.
 ;; The interceptors defined after the verb map (e.g., {:get home-page}
@@ -20,8 +43,8 @@
 (def common-interceptors [(body-params/body-params) http/html-body])
 
 ;; Tabular routes
-(def routes #{["/" :get (conj common-interceptors `home-page)]
-              ["/about" :get (conj common-interceptors `about-page)]})
+; (def routes #{["/" :get (conj common-interceptors `home-page)]
+;               ["/about" :get (conj common-interceptors `about-page)]})
 
 ;; Map-based routes
 ;(def routes `{"/" {:interceptors [(body-params/body-params) http/html-body]
@@ -29,10 +52,11 @@
 ;                   "/about" {:get about-page}}})
 
 ;; Terse/Vector-based routes
-;(def routes
-;  `[[["/" {:get home-page}
-;      ^:interceptors [(body-params/body-params) http/html-body]
-;      ["/about" {:get about-page}]]]])
+(def routes
+ `[[["/" {:get home-page}
+     ^:interceptors [(body-params/body-params) http/html-body]
+     ["/projects" {:get get-projects}]
+     ["/about" {:get about-page}]]]])
 
 
 ;; Consumed by project-catalog.server/create-server
