@@ -29,6 +29,13 @@
   }
 )
 
+(defn get-project
+    [request]
+      (let [projname (get-in request [:path-params :project-name])]
+            (http/json-response ((keyword projname) mock-projedt-collection))
+      ) 
+)
+
 (defn home-page
   [request]
   (ring-resp/response "Hello World!"))
@@ -56,6 +63,7 @@
  `[[["/" {:get home-page}
      ^:interceptors [(body-params/body-params) http/html-body]
      ["/projects" {:get get-projects}]
+     ["/projects/:project-name" {:get get-project}]
      ["/about" {:get about-page}]]]])
 
 
