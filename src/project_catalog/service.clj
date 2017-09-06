@@ -36,6 +36,12 @@
       ) 
 )
 
+(defn add-project
+  [request]
+  (prn (:json-params request))
+    (ring-resp/created "http://fake-201-url" "fake 201 in the body")
+  )
+
 (defn home-page
   [request]
   (ring-resp/response "Hello World!"))
@@ -62,7 +68,8 @@
 (def routes
  `[[["/" {:get home-page}
      ^:interceptors [(body-params/body-params) http/html-body]
-     ["/projects" {:get get-projects}]
+     ["/projects" {:get get-projects
+                   :post add-project}]
      ["/projects/:project-name" {:get get-project}]
      ["/about" {:get about-page}]]]])
 

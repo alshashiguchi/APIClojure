@@ -1,0 +1,9 @@
+{
+    "staggering-echidna" :
+    {
+        "name" : "Staggering echidna",
+        "framework" : "Pedestal",
+        "language" : "clojure",
+        "repo" : "https://gitlab.com/srehorn/staggering-echidna"
+    }
+}
