@@ -33,7 +33,7 @@
     [request]
       (let [projname (get-in request [:path-params :project-name])]
             (http/json-response ((keyword projname) mock-projedt-collection))
-      ) 
+      )
 )
 
 (defn add-project
@@ -44,8 +44,8 @@
 
 (defn home-page
   [request]
-  (ring-resp/response "Hello World!"))
-  
+  (ring-resp/response "Hello Arthur!"))
+
 (defn get-projects
   [request]
   (http/json-response mock-projedt-collection))
