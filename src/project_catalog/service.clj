@@ -2,6 +2,12 @@
   (:require [io.pedestal.http :as http]
             [io.pedestal.http.route :as route]
             [io.pedestal.http.body-params :as body-params]
+            [io.pedestal.http.route.definition :refer [defroutes]]
+            
+            [monger.core :as mg]
+            [monger.collection :as mc]
+            [monger.json]
+
             [ring.util.response :as ring-resp]))
 
 (defn about-page
@@ -48,6 +54,7 @@
 
 (defn get-projects
   [request]
+  (prn request)
   (http/json-response mock-projedt-collection))
 
 ;; Defines "/" and "/about" routes with their associated :get handlers.
