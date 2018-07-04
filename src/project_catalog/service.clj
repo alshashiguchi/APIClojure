@@ -16,6 +16,18 @@
                               (clojure-version)
                               (route/url-for ::about-page))))
 
+
+;; MONGO_CONNECTION is of this form
+;; mongodb://username:password@staff.mongohq.com:port/dbname
+(defn home-page
+  [request]
+    (prn (System/getenv "MONGO_CONNECTION")  )
+    (let [uri (System/getenv "MONGO_CONNECTION")    
+        {:keys [conn db]} (mg/connect-via-uri uri)]      
+         (http/json-response
+          (mc/find-maps db "project-catalog") ))
+  )                            
+
 (def mock-projedt-collection
   {
     :sleeping-cat
@@ -47,10 +59,6 @@
   (prn (:json-params request))
     (ring-resp/created "http://fake-201-url" "fake 201 in the body")
   )
-
-(defn home-page
-  [request]
-  (ring-resp/response "Hello Arthur!"))
 
 (defn get-projects
   [request]
