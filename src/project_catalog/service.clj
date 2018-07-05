@@ -3,6 +3,8 @@
             [io.pedestal.http.route :as route]
             [io.pedestal.http.body-params :as body-params]
             [io.pedestal.http.route.definition :refer [defroutes]]
+
+            [io.pedestal.interceptor.helpers :refer [definterceptor defhandler]]
             
             [monger.core :as mg]
             [monger.collection :as mc]
@@ -93,6 +95,15 @@
 ;; apply to / and its children (/about).
 (def common-interceptors [(body-params/body-params) http/html-body])
 
+
+(defhandler token-check [request]
+  (let [token (get-in request [:headers "x-catalog-token"])]
+    (if (not (=  token "o brave new world"))
+      (assoc (ring-resp/response {:body "access denied"}) :status 403)
+    )
+  )
+)
+
 ;; Tabular routes
 ; (def routes #{["/" :get (conj common-interceptors `home-page)]
 ;               ["/about" :get (conj common-interceptors `about-page)]})
@@ -105,7 +116,8 @@
 ;; Terse/Vector-based routes
 (def routes
  `[[["/" {:get home-page}
-     ^:interceptors [(body-params/body-params) http/html-body]
+     ^:interceptors [(body-params/body-params) 
+                      http/html-body token-check]
      ["/projects" {:get get-projects
                    :post add-project}]
      ["/projects/:proj-name" {:get get-project}]
