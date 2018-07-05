@@ -57,8 +57,22 @@
 (defn add-project
   [request]
   (prn (:json-params request))
-    (ring-resp/created "http://fake-201-url" "fake 201 in the body")
+    (let [incomming (:json-params request)      
+        connect-string (System/getenv "MONGO_CONNECTION")        
+        {:keys [conn db]} (mg/connect-via-uri connect-string)]        
+      (prn "-------------------------------")
+      (prn db)
+      (prn "-------------------------------")
+      (prn conn)
+      (prn "-------------------------------")
+      (prn incomming)
+      (prn "-------------------------------")
+      (ring-resp/created      
+        "http://my-created-resource-url"
+        (mc/insert-and-return db "project-catalog" incomming)
+        )
   )
+)
 
 (defn get-projects
   [request]
