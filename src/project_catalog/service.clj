@@ -47,12 +47,18 @@
   }
 )
 
-(defn get-project
-    [request]
-      (let [projname (get-in request [:path-params :project-name])]
-            (http/json-response ((keyword projname) mock-projedt-collection))
-      )
+(defn db-get-project [proj-name]
+  (let [connect-string (System/getenv "MONGO_CONNECTION")  
+  {:keys [conn db]} (mg/connect-via-uri connect-string)]  
+  (mc/find-maps db "project-catalog" {:proj-name proj-name})
+  )
 )
+
+(defn get-project
+  [request]
+  (http/json-response
+   (db-get-project
+    (get-in request [:path-params :proj-name]))))
 
 (defn add-project
   [request]
@@ -75,9 +81,12 @@
 )
 
 (defn get-projects
-  [request]
-  (prn request)
-  (http/json-response mock-projedt-collection))
+  [request]  
+  (let [uri (System/getenv "MONGO_CONNECTION")    
+      {:keys [conn db]} (mg/connect-via-uri uri)]      
+       (http/json-response
+        (mc/find-maps db "project-catalog") ))
+)
 
 ;; Defines "/" and "/about" routes with their associated :get handlers.
 ;; The interceptors defined after the verb map (e.g., {:get home-page}
@@ -99,7 +108,7 @@
      ^:interceptors [(body-params/body-params) http/html-body]
      ["/projects" {:get get-projects
                    :post add-project}]
-     ["/projects/:project-name" {:get get-project}]
+     ["/projects/:proj-name" {:get get-project}]
      ["/about" {:get about-page}]]]])
 
 
