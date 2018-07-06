@@ -10,6 +10,8 @@
             [clojure.data.json :as json]
             [clojure.data.xml :as xml]
 
+            [project-catalog.dbhelpers :as db]
+
             [monger.core :as mg]
             [monger.collection :as mc]
             [monger.json]
@@ -40,19 +42,19 @@
     )
   )    
   
-  (defn auth0-connections [tok]
-    (let [ret
-    (client/get "https://jemez.auth0.com/api/connections"
-          {:debug false
-           :content-type :json
-           :accept :json
-           :headers {"Authorization" (format "Bearer %s" tok)}
-           }
-          )
-    ]
-      (ret :body)
-      )
+(defn auth0-connections [tok]
+  (let [ret
+  (client/get "https://jemez.auth0.com/api/connections"
+        {:debug false
+         :content-type :json
+         :accept :json
+         :headers {"Authorization" (format "Bearer %s" tok)}
+         }
+        )
+  ]
+    (ret :body)
     )
+  )
   
     
 
@@ -92,17 +94,10 @@
   }
 )
 
-(defn db-get-project [proj-name]
-  (let [connect-string (System/getenv "MONGO_CONNECTION")
-  {:keys [conn db]} (mg/connect-via-uri connect-string)]
-  (mc/find-maps db "project-catalog" {:proj-name proj-name})
-  )
-)
-
 (defn get-project
   [request]
   (http/json-response
-   (db-get-project
+   (db/db-get-project
     (get-in request [:path-params :proj-name]))))
 
 (defn add-project
@@ -151,42 +146,41 @@
   )
 
 
-  (defn monger-mapper [xmlstring]
-    "take a raw xml string, and map a known structure into a simple map"
-    (let [proj-xml (xml/parse-str xmlstring)]
-      {
-         :proj-name (get-by-tag proj-xml :proj-name)
-         :name (get-by-tag proj-xml :name)
-         :framework (get-by-tag proj-xml :framework)
-         :language (get-by-tag proj-xml :language)
-         :repo (get-by-tag proj-xml :repo)
-      }
+(defn monger-mapper [xmlstring]
+  "take a raw xml string, and map a known structure into a simple map"
+  (let [proj-xml (xml/parse-str xmlstring)]
+    {
+       :proj-name (get-by-tag proj-xml :proj-name)
+       :name (get-by-tag proj-xml :name)
+       :framework (get-by-tag proj-xml :framework)
+       :language (get-by-tag proj-xml :language)
+       :repo (get-by-tag proj-xml :repo)
+    }
+  )
+)
+
+(defn xml-out [known-map]
+  (xml/element :project {}
+    (xml/element :_id {}  (.toString (:_id known-map)))
+    (xml/element :proj-name {} (:proj-name known-map))
+    (xml/element :name {} (:name known-map))
+    (xml/element :framework {} (:framework known-map))
+    (xml/element :repo {} (:repo known-map))
+    (xml/element :language {} (:language known-map))
+  )
+)
+
+(defn add-project-xml
+  [request]
+    (let [uri (System/getenv "MONGO_CONNECTION")
+          {:keys [conn db]} (mg/connect-via-uri uri)
+          incoming (slurp (:body request))
+          ok (mc/insert-and-return db "project-catalog" (monger-mapper incoming))]
+      (-> (ring-resp/created "http://resource-for-my-created-item"
+                             (xml/emit-str (xml-out ok)))
+          (ring-resp/content-type "application/xml"))
     )
   )
-
-  (defn xml-out [known-map]
-    (xml/element :project {}
-      (xml/element :_id {}  (.toString (:_id known-map)))
-      (xml/element :proj-name {} (:proj-name known-map))
-      (xml/element :name {} (:name known-map))
-      (xml/element :framework {} (:framework known-map))
-      (xml/element :repo {} (:repo known-map))
-      (xml/element :language {} (:language known-map))
-    )
-  )
-  
-
-  (defn add-project-xml
-    [request]
-      (let [uri (System/getenv "MONGO_CONNECTION")
-            {:keys [conn db]} (mg/connect-via-uri uri)
-            incoming (slurp (:body request))
-            ok (mc/insert-and-return db "project-catalog" (monger-mapper incoming))]
-        (-> (ring-resp/created "http://resource-for-my-created-item"
-                               (xml/emit-str (xml-out ok)))
-            (ring-resp/content-type "application/xml"))
-      )
-    )
 
 ;; Defines "/" and "/about" routes with their associated :get handlers.
 ;; The interceptors defined after the verb map (e.g., {:get home-page}
