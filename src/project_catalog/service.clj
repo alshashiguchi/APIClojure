@@ -8,6 +8,7 @@
 
             [clj-http.client :as client]
             [clojure.data.json :as json]
+            [clojure.data.xml :as xml]
 
             [monger.core :as mg]
             [monger.collection :as mc]
@@ -15,6 +16,16 @@
 
             [ring.util.response :as ring-resp]))            
 
+(defn get-by-tag [proj-map-in tname]
+  (->> proj-map-in
+     :content
+     (filter #(= (:tag %) tname))
+     first
+     :content
+     first
+  )
+)
+          
 (defn auth0-token []
   (let [ret
     (client/post "https://jemez.auth0.com/oauth/token"
@@ -139,6 +150,44 @@
   (http/json-response (git-search (get-in request [:query-params :q])))
   )
 
+
+  (defn monger-mapper [xmlstring]
+    "take a raw xml string, and map a known structure into a simple map"
+    (let [proj-xml (xml/parse-str xmlstring)]
+      {
+         :proj-name (get-by-tag proj-xml :proj-name)
+         :name (get-by-tag proj-xml :name)
+         :framework (get-by-tag proj-xml :framework)
+         :language (get-by-tag proj-xml :language)
+         :repo (get-by-tag proj-xml :repo)
+      }
+    )
+  )
+
+  (defn xml-out [known-map]
+    (xml/element :project {}
+      (xml/element :_id {}  (.toString (:_id known-map)))
+      (xml/element :proj-name {} (:proj-name known-map))
+      (xml/element :name {} (:name known-map))
+      (xml/element :framework {} (:framework known-map))
+      (xml/element :repo {} (:repo known-map))
+      (xml/element :language {} (:language known-map))
+    )
+  )
+  
+
+  (defn add-project-xml
+    [request]
+      (let [uri (System/getenv "MONGO_CONNECTION")
+            {:keys [conn db]} (mg/connect-via-uri uri)
+            incoming (slurp (:body request))
+            ok (mc/insert-and-return db "project-catalog" (monger-mapper incoming))]
+        (-> (ring-resp/created "http://resource-for-my-created-item"
+                               (xml/emit-str (xml-out ok)))
+            (ring-resp/content-type "application/xml"))
+      )
+    )
+
 ;; Defines "/" and "/about" routes with their associated :get handlers.
 ;; The interceptors defined after the verb map (e.g., {:get home-page}
 ;; apply to / and its children (/about).
@@ -168,9 +217,12 @@
      ^:interceptors [(body-params/body-params)
                       http/html-body token-check]
      ["/projects" {:get get-projects
-                   :post add-project}]
-     ["/see-also" {:get git-get}]
+                   :post add-project}]     
      ["/projects/:proj-name" {:get get-project}]
+
+     ["/projects-xml" {:post add-project-xml}]
+     ["/see-also" {:get git-get}]
+
      ["/about" {:get about-page}]]]])
 
 
