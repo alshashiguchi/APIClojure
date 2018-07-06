@@ -5,12 +5,15 @@
             [io.pedestal.http.route.definition :refer [defroutes]]
 
             [io.pedestal.interceptor.helpers :refer [definterceptor defhandler]]
-            
+
+            [clj-http.client :as client]
+            [clojure.data.json :as json]
+
             [monger.core :as mg]
             [monger.collection :as mc]
             [monger.json]
 
-            [ring.util.response :as ring-resp]))
+            [ring.util.response :as ring-resp]))            
 
 (defn about-page
   [request]
@@ -18,17 +21,16 @@
                               (clojure-version)
                               (route/url-for ::about-page))))
 
-
 ;; MONGO_CONNECTION is of this form
 ;; mongodb://username:password@staff.mongohq.com:port/dbname
 (defn home-page
   [request]
     (prn (System/getenv "MONGO_CONNECTION")  )
-    (let [uri (System/getenv "MONGO_CONNECTION")    
-        {:keys [conn db]} (mg/connect-via-uri uri)]      
+    (let [uri (System/getenv "MONGO_CONNECTION")
+        {:keys [conn db]} (mg/connect-via-uri uri)]
          (http/json-response
           (mc/find-maps db "project-catalog") ))
-  )                            
+  )
 
 (def mock-projedt-collection
   {
@@ -50,8 +52,8 @@
 )
 
 (defn db-get-project [proj-name]
-  (let [connect-string (System/getenv "MONGO_CONNECTION")  
-  {:keys [conn db]} (mg/connect-via-uri connect-string)]  
+  (let [connect-string (System/getenv "MONGO_CONNECTION")
+  {:keys [conn db]} (mg/connect-via-uri connect-string)]
   (mc/find-maps db "project-catalog" {:proj-name proj-name})
   )
 )
@@ -65,9 +67,9 @@
 (defn add-project
   [request]
   (prn (:json-params request))
-    (let [incomming (:json-params request)      
-        connect-string (System/getenv "MONGO_CONNECTION")        
-        {:keys [conn db]} (mg/connect-via-uri connect-string)]        
+    (let [incomming (:json-params request)
+        connect-string (System/getenv "MONGO_CONNECTION")
+        {:keys [conn db]} (mg/connect-via-uri connect-string)]
       (prn "-------------------------------")
       (prn db)
       (prn "-------------------------------")
@@ -75,7 +77,7 @@
       (prn "-------------------------------")
       (prn incomming)
       (prn "-------------------------------")
-      (ring-resp/created      
+      (ring-resp/created
         "http://my-created-resource-url"
         (mc/insert-and-return db "project-catalog" incomming)
         )
@@ -83,12 +85,29 @@
 )
 
 (defn get-projects
-  [request]  
-  (let [uri (System/getenv "MONGO_CONNECTION")    
-      {:keys [conn db]} (mg/connect-via-uri uri)]      
+  [request]
+  (let [uri (System/getenv "MONGO_CONNECTION")
+      {:keys [conn db]} (mg/connect-via-uri uri)]
        (http/json-response
         (mc/find-maps db "project-catalog") ))
 )
+
+(defn git-search [q]
+  (let [ret
+    (client/get
+     (format "https://api.github.com/search/repositories?q=%s+language:clojure" q)
+     {:debug false
+      :content-type :json
+      :accept :json
+      }
+     )]
+   (json/read-str (ret :body)))
+  )
+
+(defn git-get
+  [request]
+  (http/json-response (git-search (get-in request [:query-params :q])))
+  )
 
 ;; Defines "/" and "/about" routes with their associated :get handlers.
 ;; The interceptors defined after the verb map (e.g., {:get home-page}
@@ -116,10 +135,11 @@
 ;; Terse/Vector-based routes
 (def routes
  `[[["/" {:get home-page}
-     ^:interceptors [(body-params/body-params) 
+     ^:interceptors [(body-params/body-params)
                       http/html-body token-check]
      ["/projects" {:get get-projects
                    :post add-project}]
+     ["/see-also" {:get git-get}]
      ["/projects/:proj-name" {:get get-project}]
      ["/about" {:get about-page}]]]])
 

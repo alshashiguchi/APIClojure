@@ -11,9 +11,10 @@
                  [io.pedestal/pedestal.jetty "0.5.2"]
                  ;; [io.pedestal/pedestal.immutant "0.5.2"]
                  ;; [io.pedestal/pedestal.tomcat "0.5.2"]
-                  [lein-light-nrepl "0.0.18"]
+                 [lein-light-nrepl "0.0.18"]
 
-                  [com.novemberain/monger "2.0.0"]
+                 [com.novemberain/monger "2.0.0"]
+                 [clj-http "3.9.0"]
 
                  [ch.qos.logback/logback-classic "1.1.8" :exclusions [org.slf4j/slf4j-api]]
                  [org.slf4j/jul-to-slf4j "1.7.22"]
